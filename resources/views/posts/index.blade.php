@@ -7,7 +7,7 @@
         @foreach($posts as $post)
             <div class="row">
                 <div class="col-md-2">
-                    <img width="100%" src="/storage/cover_images/{{$post->cover_image}}"/>
+                    <img class="img-thumbnail" width="100%" src="/storage/cover_images/{{$post->cover_image}}"/>
                 </div>
                 <div class="col-md-10">
                     <h1><a href="/posts/{{$post->id}}">{{$post->title}}</a></h1>
