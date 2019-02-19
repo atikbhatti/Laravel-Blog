@@ -8,13 +8,23 @@ use App\Post;
 class PostsController extends Controller
 {
     /**
+     * Create a new controller instance.
+     *
+     * @return void
+     */
+    public function __construct()
+    {
+        $this->middleware('auth', ['except' => ['index', 'show']]);
+    }
+
+    /**
      * Display a listing of the resource.
      *
      * @return \Illuminate\Http\Response
      */
     public function index()
     {
-        $posts = Post::orderBy('created_at', 'DESC')->paginate(5);
+        $posts = Post::orderBy('id', 'DESC')->paginate(5);
         return view('posts.index')->with('posts', $posts);
     }
 
@@ -38,13 +48,31 @@ class PostsController extends Controller
     {
         $this->validate($request, [
             'title' => 'required',
-            'body'  => 'required'
+            'body'  => 'required',
+            'cover_image' => 'image|nullable|max:1999'
         ]);
+
+        // Handle upload
+        if ($request->hasFile('cover_image')) {
+            // Get image
+            $imageNameWithExt = $request->file('cover_image')->getClientOriginalName();
+            // Get image name
+            $imageName = pathinfo($imageNameWithExt, PATHINFO_FILENAME);
+            // Get image extension
+            $imageExt = $request->file('cover_image')->getClientOriginalExtension();
+            // Filename to save
+            $imageNameToSave= $imageName.'_'.time().'.'.$imageExt;
+            // Upload Image
+            $path = $request->file('cover_image')->storeAs('public/cover_images', $imageNameToSave);
+        } else {
+            $imageNameToSave = 'noimage.jpg';
+        }
 
         $post = new Post;
         $post->title = $request->input('title');
         $post->body = $request->input('body');
         $post->user_id = auth()->user()->id;
+        $post->cover_image = $imageNameToSave;
         $post->save();
 
         return redirect('/posts')->with('success', 'Post Created');
@@ -70,7 +98,13 @@ class PostsController extends Controller
      */
     public function edit($id)
     {
-        //
+        $post = Post::find($id);
+
+        if (auth()->user()->id !== $post->user_id) {
+            return redirect('/posts')->with('error', 'unauthorized Page');
+        }
+
+        return view('posts.edit')->with('post', $post);
     }
 
     /**
@@ -82,7 +116,17 @@ class PostsController extends Controller
      */
     public function update(Request $request, $id)
     {
-        //
+        $this->validate($request, [
+            'title' => 'required',
+            'body'  => 'required'
+        ]);
+
+        $post = Post::find($id);
+        $post->title = $request->input('title');
+        $post->body = $request->input('body');
+        $post->save();
+
+        return redirect('/posts')->with('success', 'Post Updated');
     }
 
     /**
@@ -93,6 +137,13 @@ class PostsController extends Controller
      */
     public function destroy($id)
     {
-        //
+        $post = Post::find($id);
+
+        if (auth()->user()->id !== $post->user_id) {
+            return redirect('/posts')->with('error', 'unauthorized Page');
+        }
+
+        $post->delete();
+        return redirect('/posts')->with('success', 'Post Deleted');
     }
 }
